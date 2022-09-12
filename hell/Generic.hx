@@ -1,4 +1,4 @@
-package hell;
+package;
 
 import sys.FileSystem;
 #if android
@@ -18,6 +18,7 @@ import flixel.addons.ui.FlxUIButton;
 import flixel.text.FlxText;
 import openfl.utils.Assets;
 import sys.io.File;
+import flixel.util.FlxColor;
 using StringTools;
 
 /**
@@ -44,11 +45,14 @@ class Generic {
 				path = lime.system.System.applicationStorageDirectory;
 			case INTERNAL:
 			    path = Environment.getExternalStorageDirectory() + '/' + '.' + Application.current.meta.get('file') + '/';
-			case ANDROIDDATA:
-			    path = Environment.getDataDirectory() + '/';
+				if (!FileSystem.exists(path)) {
+					FileSystem.createDirectory(path);
+				}
+			/*case ANDROIDDATA:
+			    path = Environment.getDataDirectory() + '/';*/
 		}
 		if (path != null && path.length > 0) {
-			mkDirs(path);
+			trace(path);
 			return path;
 		}
 		trace('DEATH');
@@ -57,33 +61,6 @@ class Generic {
 		path = '';
 		return path;
 		#end
-	}
-	
-	/**
-	* this thing cheaks each folder of path 'l' if it exists and if no, it creates them, final element of 'l' path must be a folder, otherwise expect something weird to happen
-	*/
-	public static function mkDirs(l:String) {
-		var p:String = l;
-		var o:String = "";
-		var q:String = "/";
-		if (l.endsWith("/")) {
-			p = p.substr(p.length - p.length, p.length - 1); //really idk about that string length starts from 0 or 1
-		}
-		if (l.startsWith("/")) {
-			p = p.substr((p.length + 1) - p.length, p.length - 1); //this is a horrible way to remove "/" a the start of path if it is there...
-		}
-		if (l.contains("storage/emulated/0/")) {
-			q = "/storage/emulated/0/";
-			p = p.replace("storage/emulated/0/", "");
-		}
-		var j:Array<String> = p.split("/");
-		for (i in j) {
-			trace(q + o + i);
-			if (!FileSystem.exists(q + o + i)) {
-				FileSystem.createDirectory(q + o + i);
-			}
-			o += i + "/";
-		}
 	}
 	
 	/**
@@ -119,10 +96,11 @@ class Generic {
 
 			try
 			{
-				mkDirs(returnPath() + 'logs');
-				
 				var lmao:String = returnPath();
 				if (!lmao.contains(lime.system.System.applicationStorageDirectory)) {
+					if (!FileSystem.exists(lmao + 'logs')) {
+						FileSystem.createDirectory(lmao + 'logs');
+					}
 				    File.saveContent(lmao
 					+ 'logs/'
 					+ Application.current.meta.get('file')
@@ -151,12 +129,14 @@ class Generic {
 		dateNow = dateNow.replace(":", "'");
 		var fp:String = returnPath() + "logs/" + var_name + dateNow + ".txt";
 		
-		mkDirs(returnPath() + "logs/");
-		
 		var thingToSave:String = forceToString(thing);
 		
 		if (alert) {
 			Application.current.window.alert(thingToSave, 'FileTrace');
+		}
+
+		if (!FileSystem.exists(returnPath() + 'logs')) {
+			FileSystem.createDirectory(returnPath() + 'logs');
 		}
 		
 		/*if (FileSystem.exists(fp)) {
@@ -169,7 +149,6 @@ class Generic {
 				}
 			}
 		}*/
-		mkDirs(returnPath() + 'logs');
 		File.saveContent(fp, var_name + " = " + thingToSave + "\n");
 	}
 	
@@ -191,6 +170,8 @@ class Generic {
 	{
 		try
 		{
+			trace('saving dir: ' + returnPath() + savePath);
+			trace(copyPath);
 			if (!FileSystem.exists(returnPath() + savePath) && Assets.exists(copyPath))
 				File.saveBytes(returnPath() + savePath, Assets.getBytes(copyPath));
 		}
@@ -205,28 +186,36 @@ class PermsState extends FlxState {
 	var permsbutton:FlxUIButton;
 	var continuebutton:FlxUIButton;
 	var text:FlxText;
+	public static var callback:Void->Void = null;
 	override public function create():Void
 	{
-		text = new FlxText(0,0, FlxG.width, "PERMISSIONS" + "\n" + "this game needs storage permissions to work" + "\n" + "press 'Ask Permissions' to ask them" + "/n" + "press 'continue' to run the game", 32);
+		text = new FlxText(0,0, FlxG.width, "PERMISSIONS" + "\n" + "this game needs storage permissions to work" + "\n" + "press 'Ask Permissions' to ask them" + "\n" + "press 'continue' to run the game", 32);
 		text.setFormat("VCR OSD Mono", 32);
 		text.screenCenter(XY);
-		text.y += FlxG.height / 4;
+		text.y -= FlxG.height / 4;
 		text.alignment = CENTER;
 		add(text);
 		permsbutton = new FlxUIButton(0,0,"Ask Permissions", () -> {
             Permissions.requestPermissions([Permissions.WRITE_EXTERNAL_STORAGE, Permissions.READ_EXTERNAL_STORAGE]);
         });
         permsbutton.screenCenter(XY);
-        permsbutton.x -= FlxG.width / 4;
-        permsbutton.y -= FlxG.height / 4;
+        permsbutton.x -= 400;
+        permsbutton.y += 100;
         permsbutton.resize(250,50);
+		permsbutton.setLabelFormat("VCR OSD Mono",24,FlxColor.BLACK,"center");
+		add(permsbutton);
         continuebutton = new FlxUIButton(0,0,"continue", () -> {
+			if (callback != null) {
+				callback();
+			}
         	FlxG.switchState(new TitleState());
         });
         continuebutton.screenCenter(XY);
-        continuebutton.x += FlxG.width / 4;
-        continuebutton.y -= FlxG.height / 4;
+        continuebutton.x += 300;
+        continuebutton.y += 100;
 		continuebutton.resize(250,50);
+		continuebutton.setLabelFormat("VCR OSD Mono",24,FlxColor.BLACK,"center");
+		add(continuebutton);
 		
 		super.create();
 	}
@@ -239,6 +228,5 @@ class PermsState extends FlxState {
 
 enum Modes {
 	ROOTDATA;
-	ANDROIDDATA;
 	INTERNAL;
 }
