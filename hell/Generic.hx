@@ -1,4 +1,4 @@
-package hell;
+package;
 
 import sys.FileSystem;
 #if android
@@ -16,24 +16,29 @@ import openfl.events.UncaughtErrorEvent;
 import flixel.FlxState;
 import flixel.addons.ui.FlxUIButton;
 import flixel.text.FlxText;
+import openfl.utils.Assets;
+import sys.io.File;
 using StringTools;
 
 /**
 * @author: Sirox (all code here is stolen /j)
-* @version: 1.0
+* @version: 1.1
 * extension-androidtools by @M.A. Jigsaw
 */
 class Generic {
 	
 	public static var mode:Modes = ROOTDATA;
-	private var path:String = null;
+	private static var path:String = null;
 	public static var initState:FlxState = null;
 	
 	/**
 	* returns some paths depending on current 'mode' variable or you can force it to any mode by typing it into ()
 	*/
-	public static function returnPath(m:Modes = mode):String {
+	public static function returnPath(m:Modes = ROOTDATA):String {
 		#if android
+		if (m == ROOTDATA && mode != ROOTDATA) { // the most stupid checking i made
+			m = mode;
+		}
 		switch (m) {
 			case ROOTDATA:
 				path = lime.system.System.applicationStorageDirectory;
@@ -73,10 +78,11 @@ class Generic {
 		}
 		var j:Array<String> = p.split("/");
 		for (i in j) {
-			if (!FileSystem.exists(q + o + j[i])) {
-				FileSystem.createDirectory(q + o + j[i]);
-				o += j[i] + "/";
+			trace(q + o + i);
+			if (!FileSystem.exists(q + o + i)) {
+				FileSystem.createDirectory(q + o + i);
 			}
+			o += i + "/";
 		}
 	}
 	
@@ -153,7 +159,7 @@ class Generic {
 			Application.current.window.alert(thingToSave, 'FileTrace');
 		}
 		
-		if (FileSystem.exists(fp)) {
+		/*if (FileSystem.exists(fp)) {
 			for (i in 0.0...Math.POSITIVE_INFINITY) {
 				fp = fp + i;
 				if (FileSystem.exists(fp)) {
@@ -162,7 +168,8 @@ class Generic {
 					break;
 				}
 			}
-		}
+		}*/
+		mkDirs(returnPath() + 'logs');
 		File.saveContent(fp, var_name + " = " + thingToSave + "\n");
 	}
 	
@@ -174,19 +181,6 @@ class Generic {
 			result = shit;
 		}
 		return result;
-	}
-	
-	public static function getInitialState(input:FlxState):FlxState {
-		#if android
-		initState = input;
-		if (!Permissions.getGrantedPermissions().contains(Permissions.WRITE_EXTERNAL_STORAGE) || !Permissions.getGrantedPermissions().contains(Permissions.READ_EXTERNAL_STORAGE)) {
-			return PermsState;
-		} else {
-			return input;
-		}
-		#else
-		return input;
-		#end
 	}
 	
 	public static function match(val1:Dynamic, val2:Dynamic) {
@@ -227,7 +221,7 @@ class PermsState extends FlxState {
         permsbutton.y -= FlxG.height / 4;
         permsbutton.resize(250,50);
         continuebutton = new FlxUIButton(0,0,"continue", () -> {
-        	FlxG.switchState(Generic.initState);
+        	FlxG.switchState(new TitleState());
         });
         continuebutton.screenCenter(XY);
         continuebutton.x += FlxG.width / 4;
