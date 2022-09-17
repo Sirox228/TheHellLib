@@ -1,4 +1,4 @@
-package;
+package hell;
 
 import sys.FileSystem;
 #if android
